@@ -4,23 +4,23 @@ on: [push]
 
 jobs:
   sast_scan: 
-    name: Run bandit Scan
+    name: Run Bandit Scan
     runs-on: ubuntu-latest
 
     steps: 
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set uo python
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          phyton-version: '3.13'
+          python-version: '3.11'
 
       - name: Install Bandit 
         run: pip install bandit
 
       - name: Run Bandit Scan
-        run: bandit -ll -ii -r . json -o bandit-output.json
+        run: bandit -ll -ii -f json -o bandit-output.json -r .
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -31,30 +31,27 @@ jobs:
 
           
   image_scan:
-    name: Build and Run an Image
+    name: Build and Scan Docker Image
     runs-on: ubuntu-latest
 
     steps: 
-       - name: Checkout image
-         uses: actions/checkout@v2
-         
-       - name: Setup Docker
-         uses: docker-practice/actions-setup-docker@v1
-         with: 
-           docker_version: '20.10.7'
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-           
-       - name: Build Docker Image
-         run: docker build -f Dockerfile -t myapp:latest . 
+      - name: Set up Docker
+        uses: docker-practice/actions-setup-docker@v1
+        with: 
+          docker_version: '20.10.7'
 
-       - name: Docker Scout Scan
-         run: |
-           curl -fs5L https://raw.githubusercontent.com/docker/scout-cli/main/install.sh -o install-scout.sh
-           sh install-scout.sh
-           docker scout quickview
-           docker scout cves
-          
+      - name: Build Docker Image
+        run: docker build -f Dockerfile -t myapp:latest .
 
-     
-  
-   
+      - name: Install Docker Scout
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh | sh
+          echo "$HOME/.docker/cli-plugins" >> $GITHUB_PATH
+
+      - name: Run Docker Scout Scan
+        run: |
+          docker scout quickview myapp:latest
+          docker scout cves myapp:latest
